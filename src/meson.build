@@ -1,5 +1,10 @@
 # src/meson.build
-srcs = ['main.c']
+srcs = [
+  'main.c',
+  'utils/pid.c',
+  'utils/maps.c',
+  'utils/probe.c',
+]
 
 exe = executable('llce', srcs, install: true, c_args: ['-D_GNU_SOURCE'])
 
