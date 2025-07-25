@@ -34,12 +34,13 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    int err = probe_vm_read(pid, start);
-    if (err == 0) {
-        printf("[OK] process_vm_readv works on %d\n", pid);
-        return EXIT_SUCCESS;
+    size_t n;
+    vma_t *vmas = get_vma_list(pid, &n);
+    for (size_t i = 0; i < n; i++) {
+        printf("%#lx-%#lx %4s %s\n", vmas[i].start, vmas[i].end, vmas[i].perms,
+               vmas[i].path);
     }
+    free_vma_list(vmas);
 
-    print_probe_error(err);
     return EXIT_FAILURE;
 }

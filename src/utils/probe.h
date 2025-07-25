@@ -1,11 +1,17 @@
 // src/utils/probe.h
 #pragma once
+#include <linux/limits.h>
 #include <stdint.h>
 #include <sys/types.h>
 
-// Try reading one byte at addr via process_vm_readv.
-// Returns 0 on success, or errno on failure.
-int probe_vm_read(pid_t pid, uintptr_t addr);
+// Single VMA entry from /proc/<pid>/maps
+typedef struct {
+    uintptr_t start;
+    uintptr_t end;
+    char perms[5];
+    char path[PATH_MAX];
+} vma_t;
 
-// Print a human-friendly error based on errno.
-void print_probe_error(int err);
+vma_t *get_vma_list(pid_t pid, size_t *count);
+
+void free_vma_list(vma_t *list);
