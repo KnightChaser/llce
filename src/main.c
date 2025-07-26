@@ -1,10 +1,10 @@
 // src/main.c
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "utils/maps.h"
 #include "utils/pid.h"
 #include "utils/probe.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /**
  * Explains how to use the program.
@@ -34,13 +34,26 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    size_t n;
-    vma_t *vmas = get_vma_list(pid, &n);
-    for (size_t i = 0; i < n; i++) {
-        printf("%#lx-%#lx %4s %s\n", vmas[i].start, vmas[i].end, vmas[i].perms,
-               vmas[i].path);
+    // Perform a full scan of the process memory
+    mem_region_t *regions;
+    size_t rcount;
+    int err = full_scan(pid, &regions, &rcount);
+    if (err) {
+        fprintf(stderr, "full_scan failed: %s\n", strerror(err));
+        return EXIT_FAILURE;
     }
-    free_vma_list(vmas);
 
-    return EXIT_FAILURE;
+    printf("[+] Scanned %zu RW regions:\n", rcount);
+    for (size_t i = 0; i < rcount; i++) {
+        if (regions[i].data) {
+            printf("  [%2zu] %#lx–%#lx (%zu bytes)\n", i, regions[i].start,
+                   regions[i].start + regions[i].len, regions[i].len);
+        } else {
+            printf("  [%2zu] %#lx–%#lx  <read failed>\n", i, regions[i].start,
+                   regions[i].start + regions[i].len);
+        }
+    }
+
+    free_mem_regions(regions, rcount);
+    return EXIT_SUCCESS;
 }
