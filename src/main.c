@@ -37,30 +37,34 @@ int main(int argc, char **argv) {
     }
 
     // Perform a full scan of the process memory
-    mem_region_t *regions;
-    size_t rcount;
-    int err = full_scan(pid, &regions, &rcount);
-    if (err) {
-        fprintf(stderr, "full_scan failed: %s\n", strerror(err));
+    mem_region_t *old_scan, *new_scan;
+    size_t old_n, new_n;
+
+    if (full_scan(pid, &old_scan, &old_n) != 0) {
+        fprintf(stderr, "Failed to perform full scan on PID %d\n", pid);
         return EXIT_FAILURE;
     }
 
-    mem_region_t *old_scan, *new_scan;
-    size_t old_n, new_n;
-    full_scan(pid, &old_scan, &old_n);
-    usleep(100000); // Sleep for 100ms to simulate some time passing
-    full_scan(pid, &new_scan, &new_n);
+    usleep(1000000); // 1 sec
+
+    if (full_scan(pid, &new_scan, &new_n) != 0) {
+        fprintf(stderr, "Failed to perform subsequent memory scan on PID %d\n",
+                pid);
+        free_mem_regions(old_scan, old_n);
+        return EXIT_FAILURE;
+    }
 
     uintptr_t *changes;
     size_t changes_count;
     detect_memory_changes(old_scan, old_n, new_scan, new_n, &changes,
                           &changes_count);
-
-    printf("Detected %zu changes in memory:\n", changes_count);
+    printf("Detected %zu changes in memory regions of PID %d:\n", changes_count,
+           pid);
     for (size_t i = 0; i < changes_count; i++) {
         printf("Change at address: 0x%lx\n", changes[i]);
     }
 
+    // Clean up all allocated memory
     free(changes);
     free_mem_regions(old_scan, old_n);
     free_mem_regions(new_scan, new_n);

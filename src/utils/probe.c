@@ -49,23 +49,18 @@ vma_t *get_vma_list(pid_t pid,     // [in]
 
         unsigned long s, e; // Start and end addresses
         char perms[5];
-        if (sscanf(line, "%lx-%lx %4s %*s %*s %*s %[^\n]", &s, &e, perms,
-                   list[index].path) != 4) {
-            continue; // Skip malformed lines
+        char path_buffer[PATH_MAX] = {0}; // temp buffer
+
+        // NOTE: If we only get 3 items, the path was likely missing such as
+        // "[heap]", which can be considered valid.
+        int items_scanned = sscanf(line, "%lx-%lx %4s %*s %*s %*s %4095s", &s,
+                                   &e, perms, path_buffer);
+        if (items_scanned < 3) {
+            // truly malformed line, skip it
+            continue;
         }
 
-        // trim newline
-        char *nl = strchr(line, '\n');
-        if (nl) {
-            *nl = '\0'; // Remove newline character
-        }
-
-        // crude path extraction: first '/' in the line, or empty
-        char *p = strchr(line, '/');
-        if (!p) {
-            p = "";
-        }
-
+        // Resize the list if it's full
         if (index == capacity) {
             size_t newCapacity = capacity * 2;
             vma_t *tmp = realloc(list, newCapacity * sizeof(vma_t));
@@ -78,11 +73,12 @@ vma_t *get_vma_list(pid_t pid,     // [in]
             capacity = newCapacity;
         }
 
+        // Populate the struct with the parsed data
         list[index].start = (uintptr_t)s;
         list[index].end = (uintptr_t)e;
         memcpy(list[index].perms, perms, 5);
-        strncpy(list[index].path, p, PATH_MAX);
-        list[index].path[PATH_MAX - 1] = '\0'; // Ensure null termination
+        strncpy(list[index].path, path_buffer, PATH_MAX - 1);
+        list[index].path[PATH_MAX - 1] = '\0'; // Ensure null-termination
 
         index++;
     }
