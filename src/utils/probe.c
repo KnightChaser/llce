@@ -1,5 +1,4 @@
 // src/utils/probe.c
-#define _GNU_SOURCE // For process_vm_readv
 #include "probe.h"
 #include <asm-generic/errno-base.h>
 #include <pthread.h>
