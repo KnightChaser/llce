@@ -7,7 +7,10 @@ srcs = [
   'datastructure/hashmap.c',
 ]
 
-inc = include_directories('utils')
+inc = include_directories(
+  'utils',
+  'datastructure',
+)
 threads_dep = dependency('threads')
 
 exe = executable(
@@ -19,6 +22,16 @@ exe = executable(
   c_args: [
     '-D_GNU_SOURCE',
   ],
+)
+
+test(
+  'llce_hashmap_test',
+  executable(
+    'test_hashmap',
+    'test/test_hashmap.c',
+    'datastructure/hashmap.c',
+    install: false,
+  ),
 )
 
 install_data(
