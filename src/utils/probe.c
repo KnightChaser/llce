@@ -151,32 +151,63 @@ typedef struct {
  */
 static void *scan_thread_fn(void *arg) {
     scan_thread_arg_t *a = arg;
+
+    // NOTE: The chunk size is set to 64 KiB, which is a reasonable size for
+    // reading memory in chunks.
+    const size_t CHUNK_SIZE = 65536; // 64 KiB
+
     for (size_t i = a->start_index; i < a->end_index; i++) {
         uintptr_t base = a->vmas[i].start;
         uintptr_t end = a->vmas[i].end;
-        size_t len = end - base;
-        uint8_t *buf = calloc(len, sizeof(uint8_t));
+        size_t total_len = end - base;
+        uint8_t *buf = calloc(total_len, sizeof(uint8_t));
         if (!buf) {
             a->regions[i].data = NULL;
             perror("Failed to allocate memory for scan buffer");
             continue;
         }
 
-        struct iovec local = {.iov_base = buf, // local buffer
-                              .iov_len = len}; // local buffer's length
-        struct iovec remote = {.iov_base = (void *)base, // remote address
-                               .iov_len = len};          // remote length
+        ssize_t total_bytes_read = 0;
+        for (size_t offset = 0; offset < total_len; offset += CHUNK_SIZE) {
+            // Calculate the size of the current chunk, handling the final
+            // partial chunk
+            size_t current_chunk_size = (offset + CHUNK_SIZE > total_len)
+                                            ? (total_len - offset)
+                                            : CHUNK_SIZE;
 
-        ssize_t bytes_read = process_vm_readv(a->pid, &local, 1, &remote, 1, 0);
-        if (bytes_read < 1) {
+            struct iovec local = {.iov_base = buf + offset,
+                                  .iov_len = current_chunk_size};
+            struct iovec remote = {.iov_base = (void *)(base + offset),
+                                   .iov_len = current_chunk_size};
+
+            ssize_t bytes_read =
+                process_vm_readv(a->pid, &local, 1, &remote, 1, 0);
+
+            if (bytes_read > 0) {
+                total_bytes_read += bytes_read;
+                if ((size_t)bytes_read < current_chunk_size) {
+                    // If we read less than the chunk size, it means we reached
+                    // the end of the VMA, okay to stop reading
+                    break;
+                }
+            } else {
+                // NOTE: It means we failed to read the memory.
+                // We can simply proceed to the next chunk, preserving the gap.
+                continue;
+            }
+        }
+
+        // After attempting all chunks, check if we successfully read anything
+        if (total_bytes_read > 0) {
+            a->regions[i].start = base;
+            a->regions[i].data = buf;
+            a->regions[i].len = total_len;
+        } else {
             free(buf);
             a->regions[i].data = NULL;
-        } else {
-            a->regions[i].start = base;
-            a->regions[i].len = (size_t)bytes_read;
-            a->regions[i].data = buf; // Store the read data
         }
     }
+
     return NULL;
 }
 
