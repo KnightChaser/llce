@@ -25,16 +25,14 @@ static void append_result(scan_result_t **arr, size_t *n, size_t *capacity,
             perror("Failed to allocate memory for scan results");
             exit(EXIT_FAILURE);
         }
-
-        // Append the new result to the array
-        if (*arr) {
-            (*arr)[*n] = (scan_result_t){
-                .addr = addr,
-                .len = len,
-            };
-            (*n)++;
-        }
     }
+
+    // Append the new result to the array
+    (*arr)[*n] = (scan_result_t){
+        .addr = addr,
+        .len = len,
+    };
+    (*n)++;
 }
 
 /**
@@ -56,7 +54,9 @@ static void append_addr(uintptr_t **arr, size_t *n, size_t *capacity,
             exit(EXIT_FAILURE);
         }
     }
-    (*arr)[(*n)++] = addr;
+
+    (*arr)[*n] = addr;
+    (*n)++;
 }
 
 /**
