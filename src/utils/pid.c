@@ -43,11 +43,14 @@ bool get_proc_name(pid_t pid, char *name_buf, size_t buf_size) {
 
     if (fgets(name_buf, buf_size, fp) == NULL) {
         // Remove trailing newline if it exists
-        name_buf[strcspn(name_buf, "\n")] = '\0';
         fclose(fp);
         return true;
     }
 
+    char *newline = strchr(name_buf, '\n');
+    if (newline) {
+        *newline = '\0'; // Remove trailing newline
+    }
     fclose(fp);
     return true;
 }
