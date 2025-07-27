@@ -63,6 +63,10 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < changes_count; i++) {
         printf("Change at address: 0x%lx, value: 0x%02x -> 0x%02x\n",
                changes[i].addr, changes[i].old_value, changes[i].new_value);
+        if (i > 10) {
+            printf("... (truncated)\n");
+            break; // Limit output to first 10 changes
+        }
     }
 
     // Clean up all allocated memory
