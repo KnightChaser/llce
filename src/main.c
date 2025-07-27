@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    // Perform a full scan of the process memory
+    // NOTE: Perform a full scan of the process memory
     mem_region_t *old_scan, *new_scan;
     size_t old_n, new_n;
 
@@ -68,8 +68,32 @@ int main(int argc, char **argv) {
             break; // Limit output to first 10 changes
         }
     }
+    printf("\n");
 
-    // Clean up all allocated memory
+    // NOTE: Search values
+    uint32_t search_value = 100;
+    scan_result_t *results = NULL;
+    size_t result_count = 0;
+    printf("Scanning PID %d for value: %u\n", pid, search_value);
+
+    int err = search_compare(old_scan, old_n, SCAN_TYPE_DWORD, CMP_EQ,
+                             &search_value, &results, &result_count);
+    if (err == 0) {
+        printf("Found %zu matches for value %u:\n", result_count, search_value);
+        for (size_t i = 0; i < result_count; i++) {
+            printf("Match at address: 0x%lx, length: %zu\n", results[i].addr,
+                   results[i].len);
+            if (i > 10) {
+                printf("... (truncated)\n");
+                break; // Limit output to first 10 matches
+            }
+        }
+    } else {
+        fprintf(stderr, "Failed to search for value %u in PID %d: %d\n",
+                search_value, pid, err);
+    }
+
+    // NOTE: Clean up all allocated memory
     free_mem_changes(changes);
     free_mem_regions(old_scan, old_n);
     free_mem_regions(new_scan, new_n);

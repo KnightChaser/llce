@@ -112,17 +112,17 @@ int search_exact(mem_region_t *regions, // [in]
  *
  * @param regions Array of memory regions to search.
  * @param rcount Number of memory regions.
+ * @param type Type of the data to compare (SCAN_TYPE_BYTE, SCAN_TYPE_WORD, ...)
  * @param cmp Comparison operation (CMP_EQ, CMP_NE, CMP_GT, CMP_LT).
  * @param value Pointer to the value to compare against.
- * @param value_len Size of the value type (e.g., sizeof(int)).
  * @param out Pointer to the output array of scan results.
  * @param out_count Pointer to the number of results found.
  */
 int search_compare(mem_region_t *regions, // [in]
                    size_t rcount,         // [in]
+                   scan_type_t type,      // [in]
                    cmp_op_t cmp,          // [in]
                    const void *value,     // [in]
-                   size_t value_len,      // [in]
                    scan_result_t **out,   // [out]
                    size_t *out_count      // [out]
 ) {
@@ -130,17 +130,61 @@ int search_compare(mem_region_t *regions, // [in]
     *out_count = 0;
     size_t capacity = 0;
 
+    size_t type_size;
+    switch (type) {
+    case SCAN_TYPE_BYTE:
+        type_size = sizeof(uint8_t); // 1 byte
+        break;
+    case SCAN_TYPE_WORD:
+        type_size = sizeof(uint16_t); // 2 bytes
+        break;
+    case SCAN_TYPE_DWORD:
+        type_size = sizeof(uint32_t); // 4 bytes
+        break;
+    case SCAN_TYPE_QWORD:
+        type_size = sizeof(uint64_t); // 8 bytes
+        break;
+    default:
+        fprintf(stderr, "ERR: Invalid scan type %d\n", type);
+        return -1; // Invalid type
+    }
+
     for (size_t i = 0; i < rcount; i++) {
         uint8_t *data = regions[i].data;
+        if (!data) {
+            continue;
+        }
         size_t len = regions[i].len;
-        for (size_t offset = 0; offset + value_len <= len; offset++) {
-            // NOTE: load the value as an unsigned integer for simplicity
+
+        // Loop through the memory, taking steps equal to the type size
+        for (size_t offset = 0; offset + type_size <= len;
+             offset += type_size) {
             uint64_t val = 0;
             uint64_t tgt = 0;
-            memcpy(&val, data + offset, value_len);
-            memcpy(&tgt, value, value_len);
             bool hit = false;
 
+            // Cast the pointers directly and dereference them,
+            // avoid slow memcmp() calls
+            switch (type) {
+            case SCAN_TYPE_BYTE:
+                val = *(uint8_t *)(data + offset);
+                tgt = *(uint8_t *)value;
+                break;
+            case SCAN_TYPE_WORD:
+                val = *(uint16_t *)(data + offset);
+                tgt = *(uint16_t *)value;
+                break;
+            case SCAN_TYPE_DWORD:
+                val = *(uint32_t *)(data + offset);
+                tgt = *(uint32_t *)value;
+                break;
+            case SCAN_TYPE_QWORD:
+                val = *(uint64_t *)(data + offset);
+                tgt = *(uint64_t *)value;
+                break;
+            }
+
+            // Perform the actual comparison based on the cmp operation
             switch (cmp) {
             case CMP_EQ:
                 hit = (val == tgt);
@@ -155,16 +199,17 @@ int search_compare(mem_region_t *regions, // [in]
                 hit = (val < tgt);
                 break;
             default:
-                perror("Unknown comparison operation");
-                return -1;
+                fprintf(stderr, "ERR: Invalid comparison operation %d\n", cmp);
+                return -1; // Invalid comparison operation
             }
 
             if (hit) {
                 append_result(out, out_count, &capacity,
-                              regions[i].start + offset, value_len);
+                              regions[i].start + offset, type_size);
             }
         }
     }
+
     return 0;
 }
 

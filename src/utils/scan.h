@@ -11,6 +11,14 @@ typedef enum {
     CMP_LT, // Less Than
 } cmp_op_t;
 
+typedef enum {
+    SCAN_TYPE_BYTE,  // 1-byte integer (uint8_t)
+    SCAN_TYPE_WORD,  // 2-byte integer (uint16_t)
+    SCAN_TYPE_DWORD, // 4-byte integer (uint32_t)
+    SCAN_TYPE_QWORD, // 8-byte integer (uint64_t)
+    // NOTE: later, add things like SCAN_TYPE_FLOAT or SCAN_TYPE_DOUBLE :)
+} scan_type_t;
+
 // A single match result
 typedef struct {
     uintptr_t addr;
@@ -34,14 +42,14 @@ int search_exact(mem_region_t *regions, size_t rcount, const void *pattern,
                  size_t pattern_len, scan_result_t **out, size_t *out_count);
 
 /**
- * Numeric comparison search
+ * Numeric comparison search, optimized for different data types.
  *
- * value: pointer to data types, such as int, float, double, etc.
- * value_len: size of the data type (e.g., sizeof(int), sizeof(float))
+ * type: The size of the data to compare (1, 2, 4, or 8 bytes).
+ * value: Pointer to the value to compare against (must match the type).
  * cmp: one of cmp_op_t values (CMP_EQ, CMP_NE, CMP_GT, CMP_LT)
  */
-int search_compare(mem_region_t *regions, size_t rcount, cmp_op_t cmp,
-                   const void *value, size_t value_len, scan_result_t **out,
+int search_compare(mem_region_t *regions, size_t rcount, scan_type_t type,
+                   cmp_op_t cmp, const void *value, scan_result_t **out,
                    size_t *out_count);
 
 /**
