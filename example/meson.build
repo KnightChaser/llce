@@ -1,3 +1,3 @@
 # example/meson.build
 
-# currently empty. Will do later
+executable('cli_cookie_clicker', 'cli_cookie_clicker.c', install: true)
