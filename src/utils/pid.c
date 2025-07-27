@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * Convert argv[1] to pid_t or exits on invalid
@@ -21,6 +22,34 @@ pid_t pid_from_argv(const char *arg) {
         exit(EXIT_FAILURE);
     }
     return (pid_t)v;
+}
+
+/**
+ * Get the process name from /proc/<pid>/comm
+ *
+ * @param pid Process ID to get the name for
+ * @param name_buf Buffer to store the process name
+ * @param buf_size Size of the buffer
+ * @return true on success, false on failure
+ */
+bool get_proc_name(pid_t pid, char *name_buf, size_t buf_size) {
+    char path[64] = {0};
+    snprintf(path, sizeof(path), "/proc/%d/comm", pid);
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        perror("Failed to open process comm file");
+        return false;
+    }
+
+    if (fgets(name_buf, buf_size, fp) == NULL) {
+        // Remove trailing newline if it exists
+        name_buf[strcspn(name_buf, "\n")] = '\0';
+        fclose(fp);
+        return true;
+    }
+
+    fclose(fp);
+    return true;
 }
 
 /**
