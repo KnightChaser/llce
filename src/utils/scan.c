@@ -174,7 +174,12 @@ int search_compare(mem_region_t *regions, // [in]
  * If a region exists only in the new scan, it is considered a change from
  * "nothing" to "something".
  *
- * ...
+ * @param old_scan Array of memory regions from the old scan.
+ * @param old_n Number of regions in the old scan.
+ * @param new_scan Array of memory regions from the new scan.
+ * @param new_n Number of regions in the new scan.
+ * @param out_changes Pointer to the output array of memory changes.
+ * @param out_count Pointer to the number of changes found.
  */
 int detect_memory_changes(mem_region_t *old_scan,     // [in]
                           size_t old_n,               // [in]
