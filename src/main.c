@@ -2,9 +2,11 @@
 #include "utils/maps.h"
 #include "utils/pid.h"
 #include "utils/probe.h"
+#include "utils/scan.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /**
  * Explains how to use the program.
@@ -43,17 +45,25 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    printf("[+] Scanned %zu RW regions:\n", rcount);
-    for (size_t i = 0; i < rcount; i++) {
-        if (regions[i].data) {
-            printf("  [%2zu] %#lx–%#lx (%zu bytes)\n", i, regions[i].start,
-                   regions[i].start + regions[i].len, regions[i].len);
-        } else {
-            printf("  [%2zu] %#lx–%#lx  <read failed>\n", i, regions[i].start,
-                   regions[i].start + regions[i].len);
-        }
+    mem_region_t *old_scan, *new_scan;
+    size_t old_n, new_n;
+    full_scan(pid, &old_scan, &old_n);
+    usleep(100000); // Sleep for 100ms to simulate some time passing
+    full_scan(pid, &new_scan, &new_n);
+
+    uintptr_t *changes;
+    size_t changes_count;
+    detect_memory_changes(old_scan, old_n, new_scan, new_n, &changes,
+                          &changes_count);
+
+    printf("Detected %zu changes in memory:\n", changes_count);
+    for (size_t i = 0; i < changes_count; i++) {
+        printf("Change at address: 0x%lx\n", changes[i]);
     }
 
-    free_mem_regions(regions, rcount);
+    free(changes);
+    free_mem_regions(old_scan, old_n);
+    free_mem_regions(new_scan, new_n);
+
     return EXIT_SUCCESS;
 }
