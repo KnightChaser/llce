@@ -37,26 +37,37 @@ static void append_result(scan_result_t **arr, size_t *n, size_t *capacity,
 }
 
 /**
- * Append a new address to the addresses array.
- * If the array is full, it will be resized to accommodate more addresses.
+ * Append a new memory change to the changes array.
+ * If the array is full, it will be resized to accommodate more changes.
  *
- * @param arr Pointer to the addresses array.
- * @param n Current number of addresses in the array.
- * @param capacity Current capacity of the addresses array.
- * @param addr Address to append.
+ * @param arr Pointer to the changes array.
+ * @param n Current number of changes in the array.
+ * @param capacity Current capacity of the changes array.
+ * @param addr Address of the changed memory location.
+ * @param old_value Old value at that address.
+ * @param new_value New value at that address.
  */
-static void append_addr(uintptr_t **arr, size_t *n, size_t *capacity,
-                        uintptr_t addr) {
+static void append_change(mem_change_t **arr, // [out]
+                          size_t *n,          // [out]
+                          size_t *capacity,   // [out]
+                          uintptr_t addr,     // [in]
+                          uint8_t old_value,  // [in]
+                          uint8_t new_value   // [in]
+) {
     if (*n == *capacity) {
         *capacity = *capacity ? *capacity * 2 : 64;
-        *arr = realloc(*arr, (*capacity) * sizeof(uintptr_t));
+        *arr = realloc(*arr, (*capacity) * sizeof(mem_change_t));
         if (!*arr) {
-            perror("Failed to allocate memory for addresses");
+            perror("Failed to allocate memory for memory changes");
             exit(EXIT_FAILURE);
         }
     }
 
-    (*arr)[*n] = addr;
+    (*arr)[*n] = (mem_change_t){
+        .addr = addr,
+        .old_value = old_value,
+        .new_value = new_value,
+    };
     (*n)++;
 }
 
@@ -163,21 +174,16 @@ int search_compare(mem_region_t *regions, // [in]
  * If a region exists only in the new scan, it is considered a change from
  * "nothing" to "something".
  *
- * @param old_scan Old memory scan results.
- * @param old_n Number of regions in the old scan.
- * @param new_scan New memory scan results.
- * @param new_n Number of regions in the new scan.
- * @param out_addrs Pointer to the output array of changed addresses.
- * @param out_count Pointer to the number of changed addresses found.
+ * ...
  */
-int detect_memory_changes(mem_region_t *old_scan, // [in]
-                          size_t old_n,           // [in]
-                          mem_region_t *new_scan, // [in]
-                          size_t new_n,           // [in]
-                          uintptr_t **out_addrs,  // [out]
-                          size_t *out_count       // [out]
+int detect_memory_changes(mem_region_t *old_scan,     // [in]
+                          size_t old_n,               // [in]
+                          mem_region_t *new_scan,     // [in]
+                          size_t new_n,               // [in]
+                          mem_change_t **out_changes, // [out]
+                          size_t *out_count           // [out]
 ) {
-    *out_addrs = NULL;
+    *out_changes = NULL;
     *out_count = 0;
     size_t capacity = 0;
 
@@ -212,27 +218,25 @@ int detect_memory_changes(mem_region_t *old_scan, // [in]
                                                            : new_scan[i].len;
             for (size_t offset = 0; offset < len; offset++) {
                 if (old_region->data[offset] != new_scan[i].data[offset]) {
-                    append_addr(out_addrs, out_count, &capacity,
-                                old_region->start + offset);
+                    append_change(out_changes, out_count, &capacity,
+                                  old_region->start + offset,
+                                  old_region->data[offset],
+                                  new_scan[i].data[offset]);
                 }
             }
         } else {
             // Region is newly allocated (exits in new_scan but not in old_scan)
             // This is considered a change from "nothing" to "something"
             for (size_t offset = 0; offset < new_scan[i].len; offset++) {
-                append_addr(out_addrs, out_count, &capacity,
-                            new_scan[i].start + offset);
+                append_change(out_changes, out_count, &capacity,
+                              new_scan[i].start + offset,
+                              0, // Old value is considered 0 (NULL)
+                              new_scan[i].data[offset]);
             }
         }
     }
 
     hash_map_destroy(old_map);
-
-    // If no changes were detected, free the output array
-    if (*out_count == 0) {
-        free(*out_addrs);
-        *out_addrs = NULL;
-    }
 
     return 0;
 }
@@ -240,10 +244,10 @@ int detect_memory_changes(mem_region_t *old_scan, // [in]
 /**
  * Free the memory allocated for scan results.
  *
- * @param res Pointer to the scan result array to free.
+ * @param changes Pointer to the array of memory changes.
  */
-void free_scan_results(scan_result_t *res) {
-    if (res) {
-        free(res);
+void free_mem_changes(mem_change_t *changes) {
+    if (changes) {
+        free(changes);
     }
 }

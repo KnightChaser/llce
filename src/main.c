@@ -54,18 +54,19 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    uintptr_t *changes;
+    mem_change_t *changes = NULL;
     size_t changes_count;
     detect_memory_changes(old_scan, old_n, new_scan, new_n, &changes,
                           &changes_count);
     printf("Detected %zu changes in memory regions of PID %d:\n", changes_count,
            pid);
     for (size_t i = 0; i < changes_count; i++) {
-        printf("Change at address: 0x%lx\n", changes[i]);
+        printf("Change at address: 0x%lx, value: 0x%02x -> 0x%02x\n",
+               changes[i].addr, changes[i].old_value, changes[i].new_value);
     }
 
     // Clean up all allocated memory
-    free(changes);
+    free_mem_changes(changes);
     free_mem_regions(old_scan, old_n);
     free_mem_regions(new_scan, new_n);
 

@@ -17,6 +17,13 @@ typedef struct {
     size_t len;
 } scan_result_t;
 
+// A single memory change event
+typedef struct {
+    uintptr_t addr;
+    uint8_t old_value;
+    uint8_t new_value;
+} mem_change_t;
+
 /**
  * Exact-byte search across all memory regions.
  *
@@ -42,9 +49,9 @@ int search_compare(mem_region_t *regions, size_t rcount, cmp_op_t cmp,
  */
 int detect_memory_changes(mem_region_t *old_scan, size_t old_n,
                           mem_region_t *new_scan, size_t new_n,
-                          uintptr_t **out_addrs, size_t *out_count);
+                          mem_change_t **out_changes, size_t *out_count);
 
 /**
- * Free the memory allocated for scan results.
+ * Free the memory allocated for memory changes.
  */
-void free_scan_results(scan_result_t *res);
+void free_mem_changes(mem_change_t *changes);
