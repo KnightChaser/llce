@@ -5,6 +5,7 @@ srcs = [
   'utils/pid.c',
   'utils/probe.c',
   'utils/scan.c',
+  'datastructure/hashmap.c',
 ]
 
 inc = include_directories('utils')

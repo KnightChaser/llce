@@ -1,5 +1,6 @@
 // src/utils/scan.c
 #include "scan.h"
+#include "../datastructure/hashmap.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -158,6 +159,9 @@ int search_compare(mem_region_t *regions, // [in]
 
 /**
  * Detect changes in memory regions by comparing two scans.
+ * If a region exists in both scans, it checks for byte-by-byte changes.
+ * If a region exists only in the new scan, it is considered a change from
+ * "nothing" to "something".
  *
  * @param old_scan Old memory scan results.
  * @param old_n Number of regions in the old scan.
@@ -177,18 +181,59 @@ int detect_memory_changes(mem_region_t *old_scan, // [in]
     *out_count = 0;
     size_t capacity = 0;
 
-    for (size_t i = 0; i < old_n && i < new_n; i++) {
-        // NOTE: assume the same ordering and size
-        size_t len = old_scan[i].len < new_scan[i].len ? old_scan[i].len
-                                                       : new_scan[i].len;
-        for (size_t offset = 0; offset < len; offset++) {
-            if (old_scan[i].data[offset] != new_scan[i].data[offset]) {
-                // If the bytes differ, we consider it a change
+    // Create a hash map from the old scan for quick lookups
+    hash_map_t *old_map = hash_map_create(old_n > 0 ? old_n * 2 - 1 : 16);
+    if (!old_map) {
+        perror("Failed to create hash map");
+        return -1;
+    }
+
+    for (size_t i = 0; i < old_n; i++) {
+        // Only map regions that have valid data buffers
+        if (old_scan[i].data) {
+            hash_map_put(old_map, old_scan[i].start, &old_scan[i]);
+        }
+    }
+
+    // Iterate through the new scan and compare against the old one via the
+    // hashmap that was just created
+    for (size_t i = 0; i < new_n; i++) {
+        if (!new_scan[i].data) {
+            // Skip regions without data
+            continue;
+        }
+
+        mem_region_t *old_region =
+            (mem_region_t *)hash_map_get(old_map, new_scan[i].start);
+
+        if (old_region) {
+            // Region exists in both scans, compare byte-by-byte
+            size_t len = old_region->len < new_scan[i].len ? old_region->len
+                                                           : new_scan[i].len;
+            for (size_t offset = 0; offset < len; offset++) {
+                if (old_region->data[offset] != new_scan[i].data[offset]) {
+                    append_addr(out_addrs, out_count, &capacity,
+                                old_region->start + offset);
+                }
+            }
+        } else {
+            // Region is newly allocated (exits in new_scan but not in old_scan)
+            // This is considered a change from "nothing" to "something"
+            for (size_t offset = 0; offset < new_scan[i].len; offset++) {
                 append_addr(out_addrs, out_count, &capacity,
-                            old_scan[i].start + offset);
+                            new_scan[i].start + offset);
             }
         }
     }
+
+    hash_map_destroy(old_map);
+
+    // If no changes were detected, free the output array
+    if (*out_count == 0) {
+        free(*out_addrs);
+        *out_addrs = NULL;
+    }
+
     return 0;
 }
 
