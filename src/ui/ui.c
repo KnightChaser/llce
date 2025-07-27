@@ -13,6 +13,8 @@
 static app_state_t g_app_state;
 
 // FOrward declarations for command helpers
+// TODO: Split such functions into a separate file (the function gonna be huge
+// later)
 static void handle_attach(char *arg);
 static void handle_fullscan(void);
 static void handle_detect(void);
@@ -159,6 +161,10 @@ static void handle_fullscan(void) {
     }
 
     // Free the previous second scan if it exists
+    // TODO: later, we have to store three different scans:
+    // - Intial scan (scan_initial)
+    // - Latest-1 scan (scan_a)
+    // - Latest scan (scan_b)
     if (g_app_state.scan_b) {
         free_mem_regions(g_app_state.scan_b, g_app_state.scan_b_count);
         g_app_state.scan_b = NULL;
