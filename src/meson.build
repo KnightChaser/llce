@@ -5,11 +5,14 @@ srcs = [
   'utils/probe.c',
   'utils/scan.c',
   'datastructure/hashmap.c',
+  'ui/logger.c',
+  'ui/ui.c',
 ]
 
 inc = include_directories(
   'utils',
   'datastructure',
+  'ui',
 )
 threads_dep = dependency('threads')
 
