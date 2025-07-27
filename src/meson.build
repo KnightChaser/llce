@@ -16,7 +16,9 @@ exe = executable(
   install: true,
   include_directories: inc,
   dependencies: [threads_dep],
-  c_args: ['-D_GNU_SOURCE'],
+  c_args: [
+    '-D_GNU_SOURCE',
+  ],
 )
 
 install_data(
