@@ -1,5 +1,4 @@
 // src/main.c
-#include "utils/maps.h"
 #include "utils/pid.h"
 #include "utils/probe.h"
 #include "utils/scan.h"
@@ -26,13 +25,6 @@ int main(int argc, char **argv) {
     pid_t pid = pid_from_argv(argv[1]);
     if (!pid_exists(pid)) {
         fprintf(stderr, "ERR: PID %d not found or accessible\n", pid);
-        return EXIT_FAILURE;
-    }
-
-    uintptr_t start;
-    size_t len;
-    if (!find_first_r_region(pid, &start, &len)) {
-        fprintf(stderr, "ERR: no readable region in /proc/%d/maps\n", pid);
         return EXIT_FAILURE;
     }
 

@@ -1,7 +1,6 @@
 # src/meson.build
 srcs = [
   'main.c',
-  'utils/maps.c',
   'utils/pid.c',
   'utils/probe.c',
   'utils/scan.c',
