@@ -95,6 +95,9 @@ void hash_map_destroy(hash_map_t *map) {
  * @param value The value to associate with the key.
  */
 void hash_map_put(hash_map_t *map, uintptr_t key, void *value) {
+    if (!map || !value) {
+        return;
+    }
     size_t index = hash_key(key) % map->capacity;
     hash_map_entry_t *entry = map->buckets[index];
 
@@ -128,6 +131,9 @@ void hash_map_put(hash_map_t *map, uintptr_t key, void *value) {
  * @return The value associated with the key, or NULL if not found.
  */
 void *hash_map_get(hash_map_t *map, uintptr_t key) {
+    if (!map) {
+        return NULL;
+    }
     size_t index = hash_key(key) % map->capacity;
     hash_map_entry_t *entry = map->buckets[index];
 
