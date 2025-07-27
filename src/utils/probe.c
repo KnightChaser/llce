@@ -255,7 +255,12 @@ int full_scan(pid_t pid,                  // [in]
     // Create the thread and wait for them to finish
     for (size_t t = 0; t < num_threads; t++) {
         size_t start = t * (region_count / num_threads);
-        size_t end = (t + 1) * (region_count / num_threads);
+        size_t end = (t == num_threads - 1)
+                         ? region_count
+                         : (t + 1) * (region_count /
+                                      num_threads); // The last thread handles
+                                                    // the remaining regions
+
         // NOTE: all threads share the same region array, but each thread will
         // only read non-overlapping regions.
         args[t] = (scan_thread_arg_t){.pid = pid,
