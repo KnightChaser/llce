@@ -10,11 +10,6 @@
 app_state_t g_app_state;
 
 /**
- * Cleanup the application state and free allocated memory.
- * This function is called when the user exits the application.
- */
-
-/**
  * Print the help message with available commands.
  * This function is called when the user types 'help' or when the application
  * starts.
