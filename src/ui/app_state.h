@@ -9,11 +9,13 @@ typedef struct {
     char proc_name[256];
     bool attached;
 
-    // We need two slots to hold scans for comparison.
-    mem_region_t *scan_a;
-    size_t scan_a_count;
-    mem_region_t *scan_b;
-    size_t scan_b_count;
+    // Full scan history
+    mem_region_t *initial_scan;
+    size_t initial_scan_count;
+    mem_region_t *previous_scan;
+    size_t previous_scan_count;
+    mem_region_t *current_scan;
+    size_t current_scan_count;
 } app_state_t;
 
 extern app_state_t g_app_state;

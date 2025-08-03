@@ -4,6 +4,7 @@
 #include "../app_state.h"
 #include "../logger.h"
 #include "handler.h"
+#include <stdio.h>
 
 /**
  * Handle the 'attach' command.
@@ -30,23 +31,34 @@ void handle_attach(char *arg) {
         return;
     }
 
-    // Attach to the process and conduct the initial scan.
+    // Get the process name and check if it is readable
     g_app_state.pid = pid;
     get_proc_name(pid, g_app_state.proc_name, sizeof(g_app_state.proc_name));
     g_app_state.attached = true;
 
+    // Perform the initial scan of the process's memory
     log_printf(LOG_DEFAULT,
                "Attaching to %s (PID: %d). Performing initial scan...\n",
                g_app_state.proc_name, g_app_state.pid);
-    if (full_scan(pid, &g_app_state.scan_a, &g_app_state.scan_a_count) != 0) {
+    mem_region_t *init_buf = NULL;
+    size_t init_count = 0;
+    if (full_scan(pid, &init_buf, &init_count) != 0) {
         log_printf(LOG_RED, "Failed to perform initial scan for PID %d.\n",
                    pid);
         cleanup_app_state();
         return;
     }
+
+    // Store into the initial scan, and reset the previous scan and current scan
+    g_app_state.initial_scan = init_buf;
+    g_app_state.initial_scan_count = init_count;
+    g_app_state.previous_scan = NULL;
+    g_app_state.previous_scan_count = 0;
+    g_app_state.current_scan = NULL;
+    g_app_state.current_scan_count = 0;
     log_printf(LOG_GREEN,
                "Initial scan complete. Found %zu readable/writable regions.\n",
-               g_app_state.scan_a_count);
+               init_count);
     log_printf(
         LOG_YELLOW,
         "You can now run 'search' or perform a 'fullscan' for comparison.\n");

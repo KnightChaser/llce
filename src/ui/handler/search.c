@@ -15,10 +15,26 @@
  * @param value_str The value to search for, as a string.
  */
 void handle_search(char *type_str, char *value_str) {
-    if (!g_app_state.scan_a) {
-        log_printf(LOG_RED, "Error: No scan data available. Use 'attach'.\n");
+    // Decide which memory-snapshot to search.
+    // If no scan is available, we can't search.
+    // If any exist, use the most recent one.
+    mem_region_t *regions;
+    size_t regions_count;
+    if (g_app_state.current_scan) {
+        regions = g_app_state.current_scan;
+        regions_count = g_app_state.current_scan_count;
+    } else if (g_app_state.previous_scan) {
+        regions = g_app_state.previous_scan;
+        regions_count = g_app_state.previous_scan_count;
+    } else if (g_app_state.initial_scan) {
+        regions = g_app_state.initial_scan;
+        regions_count = g_app_state.initial_scan_count;
+    } else {
+        log_printf(LOG_RED,
+                   "No scan data available. Please perform a scan first.\n");
         return;
     }
+
     if (!type_str || !value_str) {
         log_printf(LOG_RED, "Usage: search <type> <value>\n");
         log_printf(LOG_YELLOW, "Types: byte, word, dword, qword\n");
@@ -43,12 +59,18 @@ void handle_search(char *type_str, char *value_str) {
 
     scan_result_t *results = NULL;
     size_t count = 0;
-    search_compare(g_app_state.scan_a, g_app_state.scan_a_count, type, CMP_EQ,
-                   &value, &results, &count);
+    search_compare(regions,       // Memory regions to search
+                   regions_count, // Number of regions
+                   type,          // Type of value to search for (e.g. byte)
+                   CMP_EQ,        // Comparison type (equal)
+                   &value,        // Pointer to the value to search for
+                   &results,      // Output: array of results
+                   &count         // Output: number of matches found
+    );
 
     log_printf(LOG_GREEN, "Found %zu matches for value %lu (0x%lx).\n", count,
                value, value);
-    // TODO: We need a way to *store* these results for the next scan.
-    // For now, we just print them.
-    free(results); // search_compare doesn't have a dedicated free function yet
+
+    // TODO: store results in g_app_state.last_results for narrowing
+    free(results);
 }

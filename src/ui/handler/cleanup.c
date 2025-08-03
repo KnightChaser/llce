@@ -9,11 +9,21 @@
  * a new process is attached.
  */
 void cleanup_app_state(void) {
-    if (g_app_state.scan_a) {
-        free_mem_regions(g_app_state.scan_a, g_app_state.scan_a_count);
+    if (g_app_state.current_scan) {
+        free_mem_regions(g_app_state.current_scan,
+                         g_app_state.current_scan_count);
     }
-    if (g_app_state.scan_b) {
-        free_mem_regions(g_app_state.scan_b, g_app_state.scan_b_count);
+    if (g_app_state.previous_scan &&
+        g_app_state.previous_scan != g_app_state.initial_scan) {
+        // WARNING: If the previous scan is not the same as the initial scan,
+        // free it separately.
+        free_mem_regions(g_app_state.previous_scan,
+                         g_app_state.previous_scan_count);
+    }
+
+    if (g_app_state.initial_scan) {
+        free_mem_regions(g_app_state.initial_scan,
+                         g_app_state.initial_scan_count);
     }
     memset(&g_app_state, 0, sizeof(g_app_state));
 }

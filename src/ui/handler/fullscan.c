@@ -18,26 +18,38 @@ void handle_fullscan(void) {
         return;
     }
 
-    /**
-     * Free the previous second scan if it exists
-     * TODO: later, we have to store three different scans:
-     * - Intial scan (scan_initial)
-     * - Latest-1 scan (scan_a)
-     * - Latest scan (scan_b)
-     */
-    if (g_app_state.scan_b) {
-        free_mem_regions(g_app_state.scan_b, g_app_state.scan_b_count);
-        g_app_state.scan_b = NULL;
-    }
-
-    log_printf(LOG_DEFAULT, "Performing second scan on %s...\n",
-               g_app_state.proc_name);
-    if (full_scan(g_app_state.pid, &g_app_state.scan_b,
-                  &g_app_state.scan_b_count) != 0) {
-        log_printf(LOG_RED, "Failed to perform second scan.\n");
+    // Run new scan
+    mem_region_t *new_buf = NULL;
+    size_t new_count = 0;
+    log_printf(LOG_DEFAULT, "Performing next scan on %s... (PID: %d)\n",
+               g_app_state.proc_name, g_app_state.pid);
+    if (full_scan(g_app_state.pid, &new_buf, &new_count) != 0) {
+        log_printf(LOG_RED, "Failed to perform the fullscan.\n");
         return;
     }
-    log_printf(LOG_GREEN, "Second scan complete. Found %zu regions.\n",
-               g_app_state.scan_b_count);
+
+    // Shift history
+    if (g_app_state.current_scan) {
+        // free old previous scan result, unless it's the initial scan
+        if (g_app_state.previous_scan &&
+            g_app_state.previous_scan != g_app_state.initial_scan) {
+            free_mem_regions(g_app_state.previous_scan,
+                             g_app_state.previous_scan_count);
+        }
+        g_app_state.previous_scan = g_app_state.current_scan;
+        g_app_state.previous_scan_count = g_app_state.current_scan_count;
+    } else {
+        // This is the firrst full scan, so, previous = initial
+        g_app_state.previous_scan = g_app_state.initial_scan;
+        g_app_state.previous_scan_count = g_app_state.initial_scan_count;
+    }
+
+    // Install new as current
+    g_app_state.current_scan = new_buf;
+    g_app_state.current_scan_count = new_count;
+    log_printf(LOG_GREEN,
+               "Full scan completed successfully. %zu regions found.\n",
+               g_app_state.current_scan_count);
+
     log_printf(LOG_YELLOW, "You can now run 'detect' to see changes.\n");
 }
