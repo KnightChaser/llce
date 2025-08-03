@@ -14,6 +14,7 @@ srcs = [
   'ui/handler/fullscan.c',
   'ui/handler/help.c',
   'ui/handler/poke.c',
+  'ui/handler/print_prompt.c',
   'ui/handler/search.c',
 ]
 

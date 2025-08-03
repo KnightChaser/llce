@@ -31,23 +31,41 @@ void run_ui(void) {
         char *arg2 = strtok(NULL, " ");
         char *arg3 = strtok(NULL, " ");
 
-        if (!command)
+        if (!command) {
             continue;
-        if (strcmp(command, "help") == 0)
+        }
+
+        if (strcmp(command, "help") == 0) {
+            // Show help message
             handle_help();
-        else if (strcmp(command, "attach") == 0)
+        } else if (strcmp(command, "attach") == 0) {
+            // Attach to a process and start session
             handle_attach(arg1);
-        else if (strcmp(command, "fullscan") == 0)
+        } else if (strcmp(command, "fullscan") == 0) {
+            // Perform a full scan of the process memory
             handle_fullscan();
-        else if (strcmp(command, "detect") == 0)
-            handle_detect();
-        else if (strcmp(command, "search") == 0)
+        } else if (strcmp(command, "detect") == 0) {
+            // Detect the changs of process and its memory layout
+            bool paginate = false;
+            if (arg1 && strcmp(arg1, "page") == 0) {
+                paginate = true;
+            } else if (arg1) {
+                log_printf(LOG_RED,
+                           "Invalid argument for 'detect'. Use 'detect page' "
+                           "for page scan.\n");
+            }
+            handle_detect(paginate);
+        } else if (strcmp(command, "search") == 0) {
+            // Search for a value in the process memory
             handle_search(arg1, arg2);
-        else if (strcmp(command, "poke") == 0)
+        } else if (strcmp(command, "poke") == 0) {
+            // Poke (memory write) a value in the process memory
             handle_poke(arg1, arg2, arg3);
-        else if (strcmp(command, "exit") == 0)
+        } else if (strcmp(command, "exit") == 0) {
+            // Exit the application
             break;
-        else {
+        } else {
+            // Wrong command!! >_<
             log_printf(LOG_RED, "Unknown command: %s\n", command);
             handle_help();
         }

@@ -1,11 +1,12 @@
 // src/ui/handler/handler.h
 #pragma once
+#include <stdbool.h>
 
 // core UI handlers
 void handle_help(void);
 void handle_attach(char *arg);
 void handle_fullscan(void);
-void handle_detect(void);
+void handle_detect(bool paginate);
 void handle_search(char *type_str, char *value_str);
 void handle_poke(char *addr_str, char *type_str, char *value_str);
 
