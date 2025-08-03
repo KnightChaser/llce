@@ -10,20 +10,6 @@
 app_state_t g_app_state;
 
 /**
- * Print the help message with available commands.
- * This function is called when the user types 'help' or when the application
- * starts.
- */
-static void print_prompt(void) {
-    if (g_app_state.attached) {
-        log_printf(LOG_BOLD_WHITE, "llce(%s:%d)> ", g_app_state.proc_name,
-                   g_app_state.pid);
-    } else {
-        log_printf(LOG_BOLD_WHITE, "llce> ");
-    }
-}
-
-/**
  * Handle the overall UI loop for the command-line interface.
  */
 void run_ui(void) {
