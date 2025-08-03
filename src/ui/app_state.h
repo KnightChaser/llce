@@ -15,3 +15,5 @@ typedef struct {
     mem_region_t *scan_b;
     size_t scan_b_count;
 } app_state_t;
+
+extern app_state_t g_app_state;

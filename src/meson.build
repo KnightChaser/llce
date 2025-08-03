@@ -8,6 +8,13 @@ srcs = [
   'datastructure/hashmap.c',
   'ui/logger.c',
   'ui/ui.c',
+  'ui/handler/attach.c',
+  'ui/handler/cleanup.c',
+  'ui/handler/detect.c',
+  'ui/handler/fullscan.c',
+  'ui/handler/help.c',
+  'ui/handler/poke.c',
+  'ui/handler/search.c',
 ]
 
 inc = include_directories(
