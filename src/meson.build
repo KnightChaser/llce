@@ -4,6 +4,7 @@ srcs = [
   'utils/pid.c',
   'utils/probe.c',
   'utils/scan.c',
+  'utils/poke.c',
   'datastructure/hashmap.c',
   'ui/logger.c',
   'ui/ui.c',

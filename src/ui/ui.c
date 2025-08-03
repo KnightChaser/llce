@@ -1,6 +1,7 @@
 // src/ui/ui.c
 #include "ui.h"
 #include "../utils/pid.h"
+#include "../utils/poke.h"
 #include "../utils/probe.h"
 #include "../utils/scan.h"
 #include "app_state.h"
@@ -13,12 +14,13 @@
 static app_state_t g_app_state;
 
 // FOrward declarations for command helpers
-// TODO: Split such functions into a separate file (the function gonna be huge
-// later)
+// TODO: Split such functions into a separate file
+// (the function gonna be huge later)
 static void handle_attach(char *arg);
 static void handle_fullscan(void);
 static void handle_detect(void);
 static void handle_search(char *type_str, char *value_str);
+static void handle_poke(char *addr_str, char *type_str, char *value_str);
 static void handle_help(void);
 static void cleanup_app_state(void);
 
@@ -62,6 +64,7 @@ void run_ui(void) {
 
         char *arg1 = strtok(NULL, " ");
         char *arg2 = strtok(NULL, " ");
+        char *arg3 = strtok(NULL, " ");
 
         if (strcmp(command, "exit") == 0) {
             break;
@@ -75,6 +78,8 @@ void run_ui(void) {
             handle_detect();
         } else if (strcmp(command, "search") == 0) {
             handle_search(arg1, arg2);
+        } else if (strcmp(command, "poke") == 0) {
+            handle_poke(arg1, arg2, arg3);
         } else {
             log_printf(LOG_RED, "Unknown command: %s\n", command);
             handle_help();
@@ -98,6 +103,9 @@ static void handle_help(void) {
     log_printf(LOG_GREEN, "  detect                    ");
     log_printf(LOG_DEFAULT,
                ": Show changes between the first and second scan.\n");
+    log_printf(LOG_GREEN, "  poke <addr> <type> <value> ");
+    log_printf(LOG_DEFAULT, ": Write a value into target memory. Types: byte, "
+                            "word, dword, qword\n");
     log_printf(LOG_GREEN, "  search <type> <value>     ");
     log_printf(LOG_DEFAULT, ": Search for a value in the first scan.\n");
     log_printf(LOG_DEFAULT, "                            ");
@@ -252,6 +260,57 @@ static void handle_search(char *type_str, char *value_str) {
     // TODO: We need a way to *store* these results for the next scan.
     // For now, we just print them.
     free(results); // search_compare doesn't have a dedicated free function yet
+}
+
+static void handle_poke(char *addr_str, char *type_str, char *value_str) {
+    if (!g_app_state.attached) {
+        log_printf(LOG_RED, "Error: attach to a process first.\n");
+        return;
+    }
+    if (!addr_str || !type_str || !value_str) {
+        log_printf(LOG_RED, "Usage: poke <addr> <type> <value>\n");
+        return;
+    }
+
+    uintptr_t addr = strtoull(addr_str, NULL, 0);
+    uint64_t val = strtoull(value_str, NULL, 0);
+    int rc;
+
+    if (strcmp(type_str, "byte") == 0) {
+        uint8_t b = (uint8_t)val;
+        rc = poke_mem(g_app_state.pid, addr, &b, sizeof(b));
+        if (rc == 0) {
+            log_printf(LOG_GREEN, "Wrote byte 0x%02x -> 0x%lx\n", b, addr);
+        } else {
+            log_printf(LOG_RED, "poke failed: %s\n", strerror(rc));
+        }
+    } else if (strcmp(type_str, "word") == 0) {
+        uint16_t w = (uint16_t)val;
+        rc = poke_mem(g_app_state.pid, addr, &w, sizeof(w));
+        if (rc == 0) {
+            log_printf(LOG_GREEN, "Wrote word 0x%04x -> 0x%lx\n", w, addr);
+        } else {
+            log_printf(LOG_RED, "poke failed: %s\n", strerror(rc));
+        }
+    } else if (strcmp(type_str, "dword") == 0) {
+        uint32_t d = (uint32_t)val;
+        rc = poke_mem(g_app_state.pid, addr, &d, sizeof(d));
+        if (rc == 0) {
+            log_printf(LOG_GREEN, "Wrote dword 0x%08x -> 0x%lx\n", d, addr);
+        } else {
+            log_printf(LOG_RED, "poke failed: %s\n", strerror(rc));
+        }
+    } else if (strcmp(type_str, "qword") == 0) {
+        uint64_t q = val;
+        rc = poke_mem(g_app_state.pid, addr, &q, sizeof(q));
+        if (rc == 0) {
+            log_printf(LOG_GREEN, "Wrote qword 0x%016lx -> 0x%lx\n", q, addr);
+        } else {
+            log_printf(LOG_RED, "poke failed: %s\n", strerror(rc));
+        }
+    } else {
+        log_printf(LOG_RED, "Unknown type: %s\n", type_str);
+    }
 }
 
 /**
